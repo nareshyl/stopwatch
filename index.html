@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>POMO — Focus Timer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --accent: #ff3c00;
+      --accent2: #ffcc00;
+      --text: #f0ece4;
+      --muted: #555;
+      --work-color: #ff3c00;
+      --break-color: #00c98d;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .noise {
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.08;
+      pointer-events: none;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      width: 400px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      padding: 0;
+      box-shadow: 8px 8px 0 var(--accent);
+    }
+
+    .header {
+      border-bottom: 2px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 4px;
+      color: var(--accent);
+    }
+
+    .mode-badge {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border: 1px solid currentColor;
+      color: var(--work-color);
+      transition: color 0.4s;
+    }
+
+    .mode-badge.break { color: var(--break-color); }
+
+    .timer-section {
+      padding: 40px 24px 24px;
+      text-align: center;
+      position: relative;
+    }
+
+    .session-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .time-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 120px;
+      line-height: 1;
+      letter-spacing: -2px;
+      color: var(--text);
+      position: relative;
+      transition: color 0.4s;
+    }
+
+    .time-display.work { color: var(--work-color); }
+    .time-display.break-mode { color: var(--break-color); }
+
+    .progress-bar-wrap {
+      margin: 24px 0 8px;
+      height: 4px;
+      background: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      width: 100%;
+      transform-origin: left;
+      transition: transform 1s linear, background 0.4s;
+    }
+
+    .progress-bar.break { background: var(--break-color); }
+
+    .controls {
+      border-top: 2px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .btn {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 18px 12px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      border-right: 2px solid var(--border);
+      position: relative;
+    }
+
+    .btn:last-child { border-right: none; }
+    .btn:hover { background: var(--accent); color: #000; }
+    .btn.active { background: var(--accent); color: #000; font-weight: 700; }
+
+    .settings {
+      border-top: 2px solid var(--border);
+      padding: 16px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .setting-item label {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .setting-item input[type=range] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .setting-value {
+      font-size: 11px;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+
+    .sessions-row {
+      border-top: 2px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sessions-label { font-size: 10px; letter-spacing: 2px; color: var(--muted); flex: 1; }
+
+    .session-dots {
+      display: flex; gap: 6px;
+    }
+
+    .dot {
+      width: 10px; height: 10px;
+      border: 1.5px solid var(--muted);
+      border-radius: 50%;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .dot.filled { background: var(--accent); border-color: var(--accent); }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(1.12); opacity: 0; }
+    }
+
+    .time-display.running::after {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border: 2px solid var(--accent);
+      animation: pulse-ring 1.5s ease-out infinite;
+    }
+  </style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="container">
+  <div class="header">
+    <span class="logo">POMO</span>
+    <span class="mode-badge" id="modeBadge">FOCUS</span>
+  </div>
+
+  <div class="timer-section">
+    <div class="session-label">SESSION <span id="sessionNum">1</span> OF 4</div>
+    <div class="time-display" id="timeDisplay">25:00</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="startBtn" onclick="toggleTimer()">START</button>
+    <button class="btn" onclick="resetTimer()">RESET</button>
+    <button class="btn" onclick="skipPhase()">SKIP</button>
+  </div>
+
+  <div class="settings">
+    <div class="setting-item">
+      <label>Work (min)</label>
+      <input type="range" id="workRange" min="1" max="60" value="25" oninput="updateSetting('work', this.value)"/>
+      <div class="setting-value" id="workVal">25</div>
+    </div>
+    <div class="setting-item">
+      <label>Break (min)</label>
+      <input type="range" id="breakRange" min="1" max="30" value="5" oninput="updateSetting('break', this.value)"/>
+      <div class="setting-value" id="breakVal">5</div>
+    </div>
+  </div>
+
+  <div class="sessions-row">
+    <span class="sessions-label">COMPLETED</span>
+    <div class="session-dots" id="sessionDots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let workMins = 25, breakMins = 5;
+  let totalSeconds, remaining, interval;
+  let isRunning = false, isWork = true, completedSessions = 0;
+  const sessionCycle = 4;
+
+  function init() {
+    totalSeconds = (isWork ? workMins : breakMins) * 60;
+    remaining = totalSeconds;
+    render();
+  }
+
+  function render() {
+    const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+    const s = String(remaining % 60).padStart(2, '0');
+    const disp = document.getElementById('timeDisplay');
+    disp.textContent = `${m}:${s}`;
+
+    const frac = remaining / totalSeconds;
+    document.getElementById('progressBar').style.transform = `scaleX(${frac})`;
+
+    const modeClass = isWork ? 'work' : 'break-mode';
+    disp.className = 'time-display ' + (isRunning ? 'running ' : '') + modeClass;
+
+    const badge = document.getElementById('modeBadge');
+    badge.textContent = isWork ? 'FOCUS' : 'BREAK';
+    badge.className = 'mode-badge' + (isWork ? '' : ' break');
+
+    document.getElementById('progressBar').className = 'progress-bar' + (isWork ? '' : ' break');
+    document.getElementById('sessionNum').textContent = (completedSessions % sessionCycle) + 1;
+
+    document.querySelectorAll('.dot').forEach((d, i) => {
+      d.className = 'dot' + (i < completedSessions % sessionCycle ? ' filled' : '');
+    });
+
+    document.getElementById('startBtn').textContent = isRunning ? 'PAUSE' : 'START';
+    document.title = `${m}:${s} — ${isWork ? 'Focus' : 'Break'} | POMO`;
+  }
+
+  function toggleTimer() {
+    if (isRunning) {
+      clearInterval(interval);
+      isRunning = false;
+    } else {
+      isRunning = true;
+      interval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(interval);
+          isRunning = false;
+          if (isWork) completedSessions++;
+          isWork = !isWork;
+          init();
+          return;
+        }
+        render();
+      }, 1000);
+    }
+    render();
+  }
+
+  function resetTimer() {
+    clearInterval(interval);
+    isRunning = false;
+    isWork = true;
+    completedSessions = 0;
+    init();
+  }
+
+  function skipPhase() {
+    clearInterval(interval);
+    isRunning = false;
+    if (isWork) completedSessions++;
+    isWork = !isWork;
+    init();
+  }
+
+  function updateSetting(type, val) {
+    if (type === 'work') {
+      workMins = +val;
+      document.getElementById('workVal').textContent = val;
+    } else {
+      breakMins = +val;
+      document.getElementById('breakVal').textContent = val;
+    }
+    if (!isRunning) init();
+  }
+
+  init();
+</script>
+</body>
+</html>
